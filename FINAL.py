@@ -1,19 +1,21 @@
 import os
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
-import me
+import re
+import sys
 def make_soup(url):
     try:
-        html = urlopen(url).read()
+        req = Request(url, headers={'User-Agent': 'WebScraperDemo/1.0 (educational crawler)'})
+        html = urlopen(req, timeout=20).read()
         return BeautifulSoup(html, "html.parser"), html
-    except:
+    except Exception:
         return None, None
 def search_words(words, soup):
     count = 0
     try:
         text = soup.get_text().lower()
-    except:
+    except Exception:
         return False
     for i in words:
         if count > 1:
@@ -24,7 +26,9 @@ def search_words(words, soup):
             return True
     return False
 def save_web(soup, html, icount):
-    foo = open(str(icount)+str(soup.title.string)+'.html', 'wb')
+    title = str(soup.title.string) if soup.title and soup.title.string else 'untitled'
+    title = re.sub(r'[^A-Za-z0-9 _.-]', '_', title)[:80]
+    foo = open(str(icount)+' '+title+'.html', 'wb')
     foo.write(html)
     foo.close()
 def extract_links(soup, url, urls, visited):
@@ -42,10 +46,12 @@ def run():
     visitedlog = open('visited.txt', 'w')
     savedlog = open('saved.txt', 'w')
     icount = 0
-    while len(urls) != 0:
+    while len(urls) != 0 and len(saved) < 500:
+        url = urls.pop(0)
+        if url in visited:
+            continue
         icount+=1
         print('Progress: '+ str(len(saved))+'/500')
-        url = urls[0]
         print(url)
         soup, html = make_soup(url)
         ##logfile =open('debug.log', 'w')
@@ -60,7 +66,6 @@ def run():
             ##logfile.write(' **Failed!**\n'+str(url)+'\n')
         ##logfile.close()
         visited.append(url)
-        urls.remove(url)
     for i in visited:
         visitedlog.write(i+'\n')
     for i in saved:
@@ -68,8 +73,10 @@ def run():
     visitedlog.close()
     savedlog.close()
 
-run()
-os.system("pause")
+if __name__ == "__main__":
+    run()
+    if sys.platform.startswith("win"):
+        os.system("pause")
 
 
 
